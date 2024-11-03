@@ -11,22 +11,22 @@ const { validateGraphStructure } = require("../utils/validation");
 exports.createGraph = async (req, res) => {
   try {
     const { nodes, edges } = req.body;
-    
-    console.log("nodes: ", nodes);
-    console.log("edges: ", edges);
+
+    // console.log("nodes: ", nodes);
+    // console.log("edges: ", edges);
 
     // Step 1: Create nodes and edges
     const savedNodes = await Node.insertMany(nodes);
-    console.log("savedNodes: ", savedNodes);
-    
+    // console.log("savedNodes: ", savedNodes);
+
     const savedEdges = await Edge.insertMany(edges);
-    console.log("savedEdges: ", savedEdges);
+    // console.log("savedEdges: ", savedEdges);
 
 
     // Step 2: Create Graph
     const newGraph = new Graph({ nodes: savedNodes, edges: savedEdges });
 
-    console.log("newGraph: ", newGraph);
+    // console.log("newGraph: ", newGraph);
 
     await newGraph.save();
 
@@ -67,6 +67,19 @@ exports.runGraph = async (req, res) => {
     // Generate a new run ID
     const runId = uuidv4();
 
+    // Initialize the outputs map based on root inputs and overwrites
+    const outputs = new Map();
+
+    // Load root inputs
+    for (const [nodeId, input] of Object.entries(rootInputs)) {
+      outputs.set(nodeId, input);
+    }
+
+    // Apply data overwrites
+    for (const [nodeId, overwrite] of Object.entries(dataOverwrites)) {
+      outputs.set(nodeId, overwrite);
+    }
+
     // Create and save the run configuration
     const newRun = new Run({
       runId,
@@ -75,6 +88,7 @@ exports.runGraph = async (req, res) => {
       dataOverwrites,
       enableList,
       disableList,
+      outputs, // Include initialized outputs map here
     });
     await newRun.save();
 
@@ -88,7 +102,11 @@ exports.runGraph = async (req, res) => {
 exports.getRunOutput = async (req, res) => {
   try {
     const { runId, nodeId } = req.params;
+    console.log("runId: ", runId);
+    console.log("nodeId: ", nodeId);
+
     const run = await Run.findOne({ runId });
+    console.log("run: ", run);
     if (!run) return res.status(404).json({ error: "Run not found" });
 
     const output = run.outputs.get(nodeId);
