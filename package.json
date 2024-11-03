@@ -1,0 +1,32 @@
+{
+  "name": "kiwiq-ai",
+  "version": "1.0.0",
+  "description": "A backend API for handling graph operations with data flow tracking and validations.",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "nodemon src/app.js"
+  },
+  "keywords": [
+    "graph",
+    "api",
+    "backend",
+    "Node.js",
+    "Express",
+    "MongoDB"
+  ],
+  "author": "Subrat Yadav",
+  "license": "ISC",
+  "dependencies": {
+    "body-parser": "^1.20.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.1",
+    "joi": "^17.9.2",
+    "mongoose": "^8.8.0",
+    "uuid": "^11.0.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.7"
+  }
+}
