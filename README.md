@@ -1,268 +1,151 @@
+# Graph-Data-Flow-Assignment Backend
+
+## Overview
+
+This project provides a RESTful API for creating, validating, executing, and retrieving output data from a graph-based processing system. Each graph is composed of nodes and edges, allowing for flexible workflows with data validation, cyclic detection, and controlled execution. This backend is built with Node.js and Express and interfaces with a MongoDB database.
+
+## Project Structure
+
+The project has the following structure:
+
 ```
+.
 ├── src
 │   ├── config
-│   │   └── db.js
+│   │   └── db.js                 # Database configuration and connection setup
 │   ├── controllers
-│   │   └── graphController.js
+│   │   └── graphController.js    # Controller logic for handling graph-related endpoints
 │   ├── models
-│   │   ├── edge.js
-│   │   ├── graph.js
-│   │   ├── node.js
-│   │   └── run.js
+│   │   ├── edge.js               # Mongoose schema/model for edges
+│   │   ├── graph.js              # Mongoose schema/model for graphs
+│   │   ├── node.js               # Mongoose schema/model for nodes
+│   │   └── run.js                # Mongoose schema/model for graph runs
 │   ├── routes
-│   │   └── graphRoutes.js
+│   │   └── graphRoutes.js        # API route definitions
 │   ├── utils
-│   │   └── validation.js
-│   └── app.js
-└── .env
-└── package.json
+│   │   └── validation.js         # Graph validation logic
+│   └── app.js                    # Main application entry point
+├── .env                          # Environment variables
+└── package.json                  # Project dependencies and scripts
 ```
 
-Here are several test cases for verifying different scenarios in the backend with Postman. These cases will ensure that graph creation, validation, running, and output retrieval work as expected.
+## Installation and Setup
 
-### 1. **Test Case: Create Graph**
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/Subrat29/Graph-Data-Flow-Assignment.git
+   cd Graph-Data-Flow-Assignment
+   ```
 
-**Endpoint:** `POST /api/graph`  
-**Description:** This request creates a simple graph with two nodes and one edge between them.
+2. **Install dependencies:**
+   ```bash
+   npm install
+   ```
 
-#### Request Body:
-```json
-{
-  "nodes": [
-    {
-      "nodeId": "node1",
-      "dataIn": {},
-      "dataOut": {},
-      "pathsIn": [],
-      "pathsOut": []
-    },
-    {
-      "nodeId": "node2",
-      "dataIn": {},
-      "dataOut": {},
-      "pathsIn": [],
-      "pathsOut": []
-    }
-  ],
-  "edges": [
-    {
-      "srcNode": "node1",
-      "dstNode": "node2",
-      "srcToDstDataKeys": { "outputKey": "inputKey" }
-    }
-  ]
-}
-```
+3. **Set up environment variables:**
+   Configure your `.env` file based on `.env.example` with the following variables:
+   - `MONGO_URI` - MongoDB connection string
 
-#### Expected Response:
-- **Status**: `201 Created`
-- **Body**:
-  ```json
-  {
-    "graph": {
-      "_id": "your_graph_id",
-      "nodes": [
-        { "nodeId": "node1", "dataIn": {}, "dataOut": {}, "_id": "node1_id" },
-        { "nodeId": "node2", "dataIn": {}, "dataOut": {}, "_id": "node2_id" }
-      ],
-      "edges": [
-        {
-          "srcNode": "node1_id",
-          "dstNode": "node2_id",
-          "srcToDstDataKeys": { "outputKey": "inputKey" }
-        }
-      ]
-    }
-  }
-  ```
+4. **Start the server:**
+   ```bash
+   npm start
+   ```
 
-### 2. **Test Case: Validate Graph (Simple Valid Graph)**
+## API Endpoints
 
-**Endpoint:** `GET /api/graph/:graphId/validate`  
-**Description:** Verifies that a created graph is valid (no cycles, all nodes connected, and correct data mapping).
+### 1. **Create Graph**
 
-#### Expected Response:
-- **Status**: `200 OK`
-- **Body**:
-  ```json
-  {
-    "message": "Graph is valid"
-  }
-  ```
+   - **Endpoint:** `POST /api/graph`
+   - **Description:** Creates a new graph with nodes and edges.
+   - **Request Body:**
+     ```json
+     {
+       "nodes": [
+         { "nodeId": "node1", "dataIn": {}, "dataOut": {} },
+         { "nodeId": "node2", "dataIn": {}, "dataOut": {} }
+       ],
+       "edges": [
+         { "srcNode": "node1", "dstNode": "node2", "srcToDstDataKeys": { "outputKey": "inputKey" } }
+       ]
+     }
+     ```
+   - **Response:** `201 Created` with the graph data.
 
-### 3. **Test Case: Validate Graph (Invalid due to Cycle)**
+### 2. **Validate Graph**
 
-**Request:** Add an edge that points back from `node2` to `node1` in the graph created above.
+   - **Endpoint:** `GET /api/graph/:graphId/validate`
+   - **Description:** Validates the graph structure, checking for cycles, disconnected nodes, and edge compatibility.
+   - **Response:** `200 OK` if valid, or `400 Bad Request` with validation errors.
 
-#### New Edge Request Body:
-```json
-{
-  "srcNode": "node2",
-  "dstNode": "node1",
-  "srcToDstDataKeys": {}
-}
-```
+### 3. **Run Graph**
 
-**Endpoint:** `GET /api/graph/:graphId/validate`
+   - **Endpoint:** `POST /api/graph/:graphId/run`
+   - **Description:** Executes a graph run with specified root inputs, data overwrites, and enabled/disabled nodes.
+   - **Request Body:**
+     ```json
+     {
+       "rootInputs": { "node1": { "inputKey": "initialValue" } },
+       "dataOverwrites": { "node2": { "inputKey": "overwriteValue" } },
+       "enableList": ["node1", "node2"]
+     }
+     ```
+   - **Response:** `201 Created` with run details.
 
-#### Expected Response:
-- **Status**: `400 Bad Request`
-- **Body**:
-  ```json
-  {
-    "errors": ["Cycle detected involving node node1"]
-  }
-  ```
+### 4. **Get Node Output**
 
-### 4. **Test Case: Run Graph with Root Inputs and Data Overwrites**
+   - **Endpoint:** `GET /api/run/:runId/node/:nodeId/output`
+   - **Description:** Retrieves the output of a specific node in a graph run.
+   - **Response:** `200 OK` with the node output data.
 
-**Endpoint:** `POST /api/graph/:graphId/run`  
-**Description:** Runs the graph with a set of `rootInputs` and `dataOverwrites`.
+### 5. **Retrieve All Nodes**
 
-#### Request Body:
-```json
-{
-  "rootInputs": {
-    "node1": {
-      "inputKey": "initialValue"
-    }
-  },
-  "dataOverwrites": {
-    "node2": {
-      "inputKey": "overwriteValue"
-    }
-  },
-  "enableList": ["node1", "node2"]
-}
-```
+   - **Endpoint:** `GET /api/graph/:graphId/nodes`
+   - **Description:** Fetches all nodes in the specified graph.
+   - **Response:** `200 OK` with node details.
 
-#### Expected Response:
-- **Status**: `201 Created`
-- **Body**:
-  ```json
-  {
-    "runId": "your_run_id",
-    "run": {
-      "runId": "your_run_id",
-      "graphId": "your_graph_id",
-      "rootInputs": { "node1": { "inputKey": "initialValue" } },
-      "dataOverwrites": { "node2": { "inputKey": "overwriteValue" } },
-      "enableList": ["node1", "node2"],
-      "disableList": []
-    }
-  }
-  ```
+### 6. **Retrieve All Edges**
 
-### 5. **Test Case: Get Node Output After Run**
+   - **Endpoint:** `GET /api/graph/:graphId/edges`
+   - **Description:** Fetches all edges in the specified graph.
+   - **Response:** `200 OK` with edge details.
 
-**Endpoint:** `GET /api/run/:runId/node/:nodeId/output`  
-**Description:** Retrieve the output data of `node2` from the graph run.
+### 7. **Error Handling for Non-Existent Node**
 
-#### Expected Response:
-- **Status**: `200 OK`
-- **Body**:
-  ```json
-  {
-    "output": { "inputKey": "overwriteValue" }
-  }
-  ```
+   - **Endpoint:** `GET /api/run/:runId/node/:nonExistentNodeId/output`
+   - **Description:** Returns a 404 error if the node does not exist in the specified run.
+   - **Response:** `404 Not Found` with error message.
 
-### 6. **Test Case: Run Graph with Disabled Node**
+## Test Cases
 
-**Endpoint:** `POST /api/graph/:graphId/run`  
-**Description:** Runs the graph with `node2` disabled, which should result in `node2` being skipped.
+The following test cases ensure correct functionality of the API endpoints. Use a tool like Postman to test each endpoint:
 
-#### Request Body:
-```json
-{
-  "rootInputs": {
-    "node1": { "inputKey": "initialValue" }
-  },
-  "disableList": ["node2"]
-}
-```
+1. **Create Graph** - Verifies the graph creation with nodes and edges.
+2. **Validate Graph (Simple Valid Graph)** - Checks that a valid graph passes validation.
+3. **Validate Graph (Invalid due to Cycle)** - Adds a cycle to test cycle detection.
+4. **Run Graph with Root Inputs and Data Overwrites** - Executes the graph with initial input and overwritten data.
+5. **Get Node Output After Run** - Retrieves output data from a specific node post-run.
+6. **Run Graph with Disabled Node** - Executes the graph with a node disabled to check correct exclusion.
+7. **Retrieve All Nodes for a Graph** - Confirms all nodes are returned for a given graph.
+8. **Retrieve All Edges for a Graph** - Confirms all edges are returned for a given graph.
+9. **Error Handling for Non-Existent Graph or Node** - Tests error responses for invalid graph or node IDs.
 
-#### Expected Response:
-- **Status**: `201 Created`
-- **Body**:
-  ```json
-  {
-    "runId": "your_run_id",
-    "run": {
-      "runId": "your_run_id",
-      "graphId": "your_graph_id",
-      "rootInputs": { "node1": { "inputKey": "initialValue" } },
-      "dataOverwrites": {},
-      "enableList": [],
-      "disableList": ["node2"]
-    }
-  }
-  ```
+## Future Enhancements
 
-### 7. **Test Case: Retrieve All Nodes for a Graph**
+1. **Authentication and Authorization** - Add user-based authentication to restrict access.
+2. **Graph Data Export** - Enable data export for offline analysis or backup.
+3. **Enhanced Validation Rules** - Improve validation to handle more complex scenarios.
+4. **Graph Analytics** - Add statistics on graph complexity, execution time, and performance metrics.
 
-**Endpoint:** `GET /api/graph/:graphId/nodes`  
-**Description:** Retrieves all nodes within a specific graph.
+## Contributing
 
-#### Expected Response:
-- **Status**: `200 OK`
-- **Body**:
-  ```json
-  {
-    "nodes": [
-      {
-        "_id": "node1_id",
-        "nodeId": "node1",
-        "dataIn": {},
-        "dataOut": {},
-        "pathsIn": [],
-        "pathsOut": []
-      },
-      {
-        "_id": "node2_id",
-        "nodeId": "node2",
-        "dataIn": {},
-        "dataOut": {},
-        "pathsIn": [],
-        "pathsOut": []
-      }
-    ]
-  }
-  ```
+Contributions are welcome! Please open an issue first to discuss what you would like to change. Pull requests are welcome, but make sure to follow the style guide and add relevant tests.
 
-### 8. **Test Case: Retrieve All Edges for a Graph**
+## License
 
-**Endpoint:** `GET /api/graph/:graphId/edges`  
-**Description:** Retrieves all edges within a specific graph.
+This project is licensed under the MIT License. See the `LICENSE` file for details.
 
-#### Expected Response:
-- **Status**: `200 OK`
-- **Body**:
-  ```json
-  {
-    "edges": [
-      {
-        "_id": "edge_id",
-        "srcNode": "node1_id",
-        "dstNode": "node2_id",
-        "srcToDstDataKeys": { "outputKey": "inputKey" }
-      }
-    ]
-  }
-  ```
+## Contact
 
-### 9. **Test Case: Error Handling for Non-Existent Graph or Node**
-
-**Endpoint:** `GET /api/run/:runId/node/:nonExistentNodeId/output`  
-**Description:** Attempt to retrieve output from a node that doesn’t exist in the specified run.
-
-#### Expected Response:
-- **Status**: `404 Not Found`
-- **Body**:
-  ```json
-  {
-    "error": "Output not found for node"
-  }
-  ```
+For any queries or issues, please contact subratyadav29@example.com.
 
 ---
